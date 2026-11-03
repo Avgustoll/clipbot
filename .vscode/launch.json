@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Estrai clip",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "viral_clipper",
+      "args": ["${input:source}", "--top", "5"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Verifica ambiente",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "viral_clipper.check_env",
+      "cwd": "${workspaceFolder}"
+    }
+  ],
+  "inputs": [
+    { "id": "source", "type": "promptString", "description": "URL o percorso del video" }
+  ]
+}

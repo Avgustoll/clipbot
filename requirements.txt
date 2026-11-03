@@ -1,0 +1,43 @@
+# Ingestione
+yt-dlp
+static-ffmpeg          # binari ffmpeg/ffprobe senza Homebrew
+ffmpeg-python
+
+# Trascrizione
+faster-whisper
+
+# Analisi audio
+librosa
+soundfile
+numpy
+scipy
+
+# Analisi video / reframing
+scenedetect
+opencv-python
+mediapipe
+
+# Scoring LLM
+anthropic
+
+# Feedback / modello di scoring
+pandas
+scikit-learn
+# lightgbm -> usare sklearn HistGradientBoosting (lightgbm richiede libomp via Homebrew)
+
+# Backend e utilità
+fastapi
+uvicorn
+pydantic
+python-dotenv
+tqdm
+rich
+
+# Sviluppo
+ipykernel
+pytest
+ruff
+
+# Upload su YouTube e statistiche dei canali
+google-api-python-client
+google-auth-oauthlib

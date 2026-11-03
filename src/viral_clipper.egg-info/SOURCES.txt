@@ -1,0 +1,15 @@
+pyproject.toml
+src/viral_clipper/__init__.py
+src/viral_clipper/__main__.py
+src/viral_clipper/audio.py
+src/viral_clipper/check_env.py
+src/viral_clipper/ingest.py
+src/viral_clipper/render.py
+src/viral_clipper/scoring.py
+src/viral_clipper/transcribe.py
+src/viral_clipper.egg-info/PKG-INFO
+src/viral_clipper.egg-info/SOURCES.txt
+src/viral_clipper.egg-info/dependency_links.txt
+src/viral_clipper.egg-info/entry_points.txt
+src/viral_clipper.egg-info/top_level.txt
+tests/test_env.py
