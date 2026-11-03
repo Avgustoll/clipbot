@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from .copy import finalize, make_description, make_title
 from .transcribe import Segment
 
 MODEL = "claude-opus-5-5"
@@ -70,14 +71,20 @@ Valuta ogni criterio da 0 a 10 con onestà e calibrazione: un momento nella medi
 video vale 5, un 9-10 è raro. Un punteggio gonfiato fa scegliere clip peggiori.
 
 ## Testi (nella lingua del video)
-- title: il titolo dello Short, massimo 70 caratteri. Crea curiosità o promette un \
-beneficio concreto, ma deve essere vero rispetto a ciò che si sente nella clip. \
-Niente maiuscolo integrale, al massimo un'emoji.
+- title: il titolo dello Short, massimo 70 caratteri. Deve far venire voglia di guardare \
+nelle prime 3 parole: usa una domanda, un numero concreto, una promessa specifica o un \
+contrasto ("Perché X sbaglia tutto su Y", "3 errori che costano il 40%"). Niente \
+titoli generici ("Un consiglio importante"), niente clickbait falso: deve essere vero \
+rispetto a ciò che si sente. Niente maiuscolo integrale, al massimo un'emoji.
 - hook_text: la scritta in sovraimpressione nei primi secondi, massimo 8 parole. \
 Completa la prima frase parlata invece di ripeterla (es. pone la domanda a cui la \
 clip risponde).
-- description: 1-2 righe che invogliano a guardare, poi 3-5 hashtag pertinenti. \
-Non aggiungere #Shorts: lo inserisce il programma.
+- description: tre parti separate da una riga vuota. (1) una frase che anticipa il \
+payoff senza spoilerarlo e finisce con un invito leggero a guardare; (2) una riga di \
+contesto (chi parla / di cosa tratta il video); (3) da 3 a 5 hashtag pertinenti sulla \
+stessa riga: i primi 2 su tema e nicchia ("#startup", "#marketing"), gli ultimi di \
+portata più ampia. Solo lettere minuscole, nessuno spazio dentro l'hashtag, nessun \
+doppione. Non aggiungere #Shorts: lo inserisce il programma.
 - reason: in una o due frasi, perché funziona, citando la frase di apertura.
 
 Se ricevi Shorts di riferimento, studiane hook, ritmo e temi e privilegia momenti che \
@@ -142,7 +149,7 @@ def find_clips(
         clips = _llm_clips(segments, top, min_len, max_len, references or [], video_title, instructions, exclude)
     else:
         print("  ANTHROPIC_API_KEY non impostata: uso lo scoring euristico")
-        clips = _heuristic_clips(segments, top + len(exclude) * 3, min_len, max_len, audio_energy)
+        clips = _heuristic_clips(segments, top + len(exclude) * 3, min_len, max_len, audio_energy, video_title)
     clips = [c for c in clips if not _overlaps_any(c, exclude)]
     return sorted(clips, key=lambda c: c.score, reverse=True)[:top]
 
@@ -213,9 +220,11 @@ def _llm_clips(
             continue
         first, last = _fit_length(segments, first, last, min_len, max_len)
         score = sum(c[k] * w for k, w in WEIGHTS.items()) * 10
+        text = " ".join(s.text for s in segments[first:last + 1])
+        title, description = finalize(c["title"], c["description"], text, video_title)
         clips.append(Clip(
             by_id[first].start, by_id[last].end, round(score, 1),
-            c["title"], c["hook_text"], c["reason"], first, last, c["description"],
+            title, c["hook_text"], c["reason"], first, last, description,
         ))
     return _drop_overlaps(clips)
 
@@ -231,6 +240,7 @@ HOOK_PATTERNS = re.compile(
 
 def _heuristic_clips(
     segments: list[Segment], top: int, min_len: float, max_len: float, audio_energy: np.ndarray | None,
+    video_title: str = "",
 ) -> list[Clip]:
     candidates = []
     for i in range(len(segments)):
@@ -248,8 +258,9 @@ def _heuristic_clips(
             score = 40 * min(hook_hits, 2) / 2 + 30 * min(density * 20, 1) + 30 * energy
             candidates.append(Clip(
                 window[0].start, window[-1].end, round(score, 1),
-                window[0].text[:60], " ".join(window[0].text.split()[:8]),
+                make_title(text), " ".join(window[0].text.split()[:8]),
                 f"hook={hook_hits}, densità={density:.2f}, energia={energy:.2f}", i, j,
+                finalize("", make_description(text, video_title), text, video_title)[1],
             ))
     return _drop_overlaps(sorted(candidates, key=lambda c: c.score, reverse=True))[: top]
 
