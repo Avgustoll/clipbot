@@ -29,7 +29,7 @@ def transcribe(wav: Path, job_dir: Path, model_size: str = "small", language: st
     from faster_whisper import WhisperModel
 
     model = WhisperModel(model_size, device="auto", compute_type="int8")
-    words = _transcribe_words(model, wav, language, vad=True)
+    words = _transcribe_words(model, wav, language, vad=True, batched=True)
     if not words:
         # Il filtro VAD scarta la voce sopra la musica (canzoni, intro): riprova senza
         print("  nessun parlato con il filtro VAD, riprovo senza…")
@@ -42,8 +42,19 @@ def transcribe(wav: Path, job_dir: Path, model_size: str = "small", language: st
     return segments
 
 
-def _transcribe_words(model, wav: Path, language: str | None, vad: bool) -> list[Word]:
-    raw_segments, info = model.transcribe(str(wav), language=language, word_timestamps=True, vad_filter=vad)
+BATCH_SIZE = 8
+
+
+def _transcribe_words(model, wav: Path, language: str | None, vad: bool, batched: bool = False) -> list[Word]:
+    if batched and vad:
+        # Decodifica più finestre audio in parallelo: 2-4x più veloce, stessa precisione
+        from faster_whisper import BatchedInferencePipeline
+
+        raw_segments, info = BatchedInferencePipeline(model=model).transcribe(
+            str(wav), language=language, word_timestamps=True, batch_size=BATCH_SIZE,
+        )
+    else:
+        raw_segments, info = model.transcribe(str(wav), language=language, word_timestamps=True, vad_filter=vad)
     print(f"  lingua rilevata: {info.language} ({info.language_probability:.0%})")
     words = []
     for seg in raw_segments:

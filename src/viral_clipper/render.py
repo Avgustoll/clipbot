@@ -60,7 +60,7 @@ def render_clip(
         "-ss", f"{clip.start:.3f}", "-to", f"{clip.end:.3f}", "-i", str(source),
         "-vf", vf,
         "-af", "loudnorm=I=-14:TP=-1.5:LRA=11",
-        "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-r", "30",
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-r", "30",
         "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart",
         str(out_path),
     ], cwd=work_dir)

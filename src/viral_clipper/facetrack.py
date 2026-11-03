@@ -99,19 +99,22 @@ def _detect(cap: cv2.VideoCapture, start: float, end: float, src_w: int, src_h: 
     import mediapipe as mp
 
     detections: dict[float, list[Face]] = {}
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    step = max(1, round(fps / SAMPLE_FPS))  # un frame ogni `step`
+    scale = 640 / max(src_w, src_h)  # BlazeFace short-range lavora meglio su immagini piccole
+    k = 1 / scale if scale < 1 else 1
+    n_samples = int((end - start) * SAMPLE_FPS)
+
+    # Un solo seek all'inizio, poi lettura sequenziale: il seek per ogni campione è molto più lento
+    cap.set(cv2.CAP_PROP_POS_MSEC, start * 1000)
     with _detector() as detector:
-        t = start
-        while t < end:
-            cap.set(cv2.CAP_PROP_POS_MSEC, t * 1000)
+        for i in range(n_samples):
             ok, frame = cap.read()
             if not ok:
                 break
-            # BlazeFace short-range lavora meglio su immagini piccole: rimpiccioliamo a 640px
-            scale = 640 / max(src_w, src_h)
-            small = cv2.resize(frame, None, fx=scale, fy=scale) if scale < 1 else frame
+            small = cv2.resize(frame, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA) if scale < 1 else frame
             rgb = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
             result = detector.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb))
-            k = 1 / scale if scale < 1 else 1
             faces = []
             for d in result.detections:
                 b = d.bounding_box
@@ -120,8 +123,10 @@ def _detect(cap: cv2.VideoCapture, start: float, end: float, src_w: int, src_h: 
                     cy=(b.origin_y + b.height / 2) * k,
                     size=(b.width * b.height * k * k) / (src_w * src_h),
                 ))
-            detections[round(t - start, 3)] = faces
-            t += 1 / SAMPLE_FPS
+            detections[round(i / SAMPLE_FPS, 3)] = faces
+            for _ in range(step - 1):  # salta i frame intermedi (grab non li converte)
+                if not cap.grab():
+                    break
     return detections
 
 

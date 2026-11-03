@@ -4,6 +4,8 @@ import json
 from dataclasses import asdict
 from pathlib import Path
 
+RENDER_WORKERS = 3  # l'encoder hardware del Mac regge poche sessioni in parallelo
+
 
 class ClipperError(Exception):
     pass
@@ -62,9 +64,17 @@ def run_clipper(
     # Una nuova esecuzione sostituisce le clip precedenti, così clips/ non mescola risultati diversi
     for old in clips_dir.glob("clip_*.mp4"):
         old.unlink()
+    from concurrent.futures import ThreadPoolExecutor
+
+    def render(item):
+        i, clip = item
+        return render_clip(video, clip, segments, clips_dir, job_dir / "lavoro", i, track_faces=not center)
+
+    # ffmpeg e il rilevamento volti non bloccano il GIL: più clip insieme sfruttano tutti i core
+    with ThreadPoolExecutor(max_workers=min(RENDER_WORKERS, len(clips))) as pool:
+        paths = list(pool.map(render, enumerate(clips, 1)))
     report = []
-    for i, clip in enumerate(clips, 1):
-        path = render_clip(video, clip, segments, clips_dir, job_dir / "lavoro", i, track_faces=not center)
+    for i, (clip, path) in enumerate(zip(clips, paths), 1):
         print(f"  #{i} [{clip.score:5.1f}] {clip.start:7.1f}-{clip.end:7.1f}s  {clip.title}")
         report.append({"file": path.name, "path": str(path), **asdict(clip)})
     (job_dir / "clips.json").write_text(json.dumps(report, ensure_ascii=False, indent=2))
