@@ -6,6 +6,8 @@ requires-python = ">=3.11"
 
 [project.scripts]
 viral-clipper = "viral_clipper.__main__:main"
+viral-analyst = "viral_clipper.analyst.__main__:main"
+viral-studio = "viral_clipper.web.app:main"
 
 [build-system]
 requires = ["setuptools>=68"]

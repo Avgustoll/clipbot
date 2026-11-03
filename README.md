@@ -2,6 +2,17 @@
 
 Estrae automaticamente le clip più virali da un video lungo e le esporta in verticale 9:16 con sottotitoli animati.
 
+## Installazione e avvio
+
+```bash
+python3.11 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt && pip install -e .
+cp .env.example .env        # opzionale: aggiungi ANTHROPIC_API_KEY
+viral-studio                # interfaccia web su http://127.0.0.1:8000
+```
+
+Serve anche `ffmpeg` nel PATH (`brew install ffmpeg`).
+
 ## Uso
 
 ```bash
